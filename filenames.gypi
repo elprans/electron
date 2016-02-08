@@ -558,7 +558,6 @@
       'chromium_src/extensions/browser/app_window/size_constraints.h',
       'chromium_src/extensions/common/url_pattern.cc',
       'chromium_src/extensions/common/url_pattern.h',
-      'chromium_src/library_loaders/libspeechd_loader.cc',
       'chromium_src/library_loaders/libspeechd.h',
       'chromium_src/net/test/embedded_test_server/stream_listen_socket.cc',
       'chromium_src/net/test/embedded_test_server/stream_listen_socket.h',

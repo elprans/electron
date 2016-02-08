@@ -16,7 +16,7 @@
       'arm_neon%': 1,
 
       # Abosulte path to source root.
-      'source_root%': '<!(node <(DEPTH)/tools/atom_source_root.js)',
+      'source_root%': '<!(python <(DEPTH)/tools/atom_source_root.py)',
     },
 
     # Copy conditionally-set variables out one scope.
@@ -38,34 +38,6 @@
       # Search for the available version of SDK.
       ['OS=="mac"', {
         'mac_sdk%': '<!(python <(DEPTH)/tools/mac/find_sdk.py <(mac_sdk_min))',
-      }],
-
-      ['OS=="linux"', {
-        'variables': {
-          # The system libdir used for this ABI.
-          'system_libdir%': 'lib',
-
-          # Setting the path to sysroot.
-          'conditions': [
-            ['target_arch=="arm"', {
-              # sysroot needs to be an absolute path otherwise it generates
-              # incorrect results when passed to pkg-config
-              'sysroot%': '<(source_root)/vendor/debian_wheezy_arm-sysroot',
-            }],
-            ['target_arch=="ia32"', {
-              'sysroot%': '<(source_root)/vendor/debian_wheezy_i386-sysroot',
-            }],
-            ['target_arch=="x64"', {
-              'sysroot%': '<(source_root)/vendor/debian_wheezy_amd64-sysroot',
-            }],
-          ],
-        },
-        # Copy conditionally-set variables out one scope.
-        'sysroot%': '<(sysroot)',
-        'system_libdir%': '<(system_libdir)',
-
-        # Redirect pkg-config to search from sysroot.
-        'pkg-config%': '<(source_root)/tools/linux/pkg-config-wrapper "<(sysroot)" "<(target_arch)" "<(system_libdir)"',
       }],
 
       # Set default compiler flags depending on ARM version.
@@ -135,23 +107,6 @@
         },
       },
     }],
-
-    # Setup sysroot environment.
-    ['OS=="linux" and target_arch in ["arm", "ia32", "x64"]', {
-      'target_defaults': {
-        'target_conditions': [
-          ['_toolset=="target"', {
-            'cflags': [
-              '--sysroot=<(sysroot)',
-            ],
-            'ldflags': [
-              '--sysroot=<(sysroot)',
-              '<!(<(source_root)/tools/linux/sysroot_ld_path.sh <(sysroot))',
-            ],
-          }]
-        ],
-      },
-    }],  # sysroot
 
     # Setup cross-compilation on Linux.
     ['OS=="linux"', {
