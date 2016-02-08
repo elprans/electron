@@ -22,7 +22,7 @@
       'arm_neon%': 1,
 
       # Abosulte path to source root.
-      'source_root%': '<!(node <(DEPTH)/tools/atom_source_root.js)',
+      'source_root%': '<!(python <(DEPTH)/tools/atom_source_root.py)',
     },
 
     # Copy conditionally-set variables out one scope.
@@ -46,7 +46,7 @@
         'mac_sdk%': '<!(python <(DEPTH)/tools/mac/find_sdk.py <(mac_sdk_min))',
       }],
 
-      ['OS=="linux"', {
+      ['OS=="linux" and 0', {
         'variables': {
           # The system libdir used for this ABI.
           'system_libdir%': 'lib',
@@ -134,7 +134,7 @@
           'CLANG_CXX_LANGUAGE_STANDARD': 'c++14',  # -std=c++14
         },
         'target_conditions': [
-          ['_target_name in ["electron", "brightray"]', {
+          ['0 and _target_name in ["electron", "brightray"]', {
             'conditions': [
               ['OS=="mac"', {
                 'xcode_settings': {
@@ -170,18 +170,7 @@
               'OTHER_LDFLAGS': [ '-stdlib=libc++' ],
             },
           }],
-          ['OS=="linux" and _toolset=="target"', {
-            'cflags_cc': [
-              '-std=c++14',
-              '-nostdinc++',
-              '-isystem<(libchromiumcontent_src_dir)/buildtools/third_party/libc++/trunk/include',
-              '-isystem<(libchromiumcontent_src_dir)/buildtools/third_party/libc++abi/trunk/include',
-            ],
-            'ldflags': [
-              '-nostdlib++',
-            ],
-          }],
-          ['OS=="linux" and _toolset=="host"', {
+          ['OS=="linux"', {
             'cflags_cc': [
               '-std=c++14',
             ],
@@ -213,8 +202,7 @@
       },
     }],
 
-    # Setup sysroot environment.
-    ['OS=="linux" and target_arch in ["arm", "ia32", "x64", "arm64", "mips64el"]', {
+    ['0 and OS=="linux" and target_arch in ["arm", "ia32", "x64", "arm64", "mips64el"]', {
       'target_defaults': {
         'target_conditions': [
           ['_toolset=="target"', {
@@ -255,10 +243,38 @@
           ['target_arch=="x64" and _toolset=="target"', {
             'cflags': [
               '-m64',
-              '-march=x86-64',
             ],
             'ldflags': [
               '-m64',
+            ],
+            'conditions': [
+              ['use_lto==1 and clang==0', {
+                'cflags': [
+                  '-fno-fat-lto-objects',
+                  '-fuse-linker-plugin',
+                  '-flto=4',
+                  '--param=lto-partitions=1',
+                ],
+                'ldflags': [
+                  '-fno-fat-lto-objects',
+                  '-fuse-linker-plugin',
+                  '-flto=4',
+                  '--param=lto-partitions=1',
+                ],
+                'arflags': [
+                  '<!@(python <(DEPTH)/tools/ar-flags.py)',
+                ]
+              }],
+              ['use_lto==1 and clang==1', {
+                'cflags': [
+                  '-flto',
+                  '-fwhole-program-vtables'
+                ],
+                'ldflags': [
+                  '-flto',
+                  '-fwhole-program-vtables'
+                ],
+              }],
             ],
           }],  # target_arch=="x64" and _toolset=="target"
           ['target_arch=="arm" and _toolset=="target"', {

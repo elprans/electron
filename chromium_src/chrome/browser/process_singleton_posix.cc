@@ -48,6 +48,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <set>
