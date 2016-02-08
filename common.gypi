@@ -2,6 +2,7 @@
   'includes': [
     'toolchain.gypi',
     'vendor/brightray/brightray.gypi',
+    'vendor/node/common.gypi',
   ],
   'variables': {
     # Tell crashpad to build as external project.
@@ -11,31 +12,44 @@
     'chromeos': 0,
     # Reflects node's config.gypi.
     'component%': 'static_library',
-    'python': 'python',
+    'python%': 'python',
     'openssl_fips': '',
     'openssl_no_asm': 1,
+
+    'host_arch': '<!(python <(DEPTH)/chromium/v8/gypfiles/detect_v8_host_arch.py)',
+
+    # ICU configuration for Node.
+    # Note: the use of icu-system.gyp does not necessarily
+    # indicate that the system ICU will be used, it merely
+    # disables the use of the version bundled with Node.
+    'icu_gyp_path': 'tools/icu/icu-system.gyp',
+    'icu_small': 'false',
+
     'use_openssl_def': 0,
     'OPENSSL_PRODUCT': 'libopenssl.a',
-    'node_release_urlbase': 'https://atom.io/download/atom-shell',
-    'node_byteorder': '<!(node <(DEPTH)/tools/get-endianness.js)',
+    'node_release_urlbase': 'https://atom.io/download/electron',
+    'node_byteorder': '<!(python <(DEPTH)/tools/get-endianness.py)',
     'node_target_type': 'shared_library',
+    'node_module_version': '',
     'node_install_npm': 'false',
     'node_prefix': '',
     'node_shared': 'true',
     'node_shared_cares': 'false',
-    'node_shared_http_parser': 'false',
-    'node_shared_libuv': 'false',
-    'node_shared_openssl': 'false',
     'node_shared_v8': 'true',
-    'node_shared_zlib': 'false',
+    'node_shared_http_parser': 'true',
+    # There are ABI-incompatible modifications to libuv
+    'node_shared_libuv': 'false',
+    'node_shared_openssl': 'true',
+    'node_shared_zlib': 'true',
     'node_tag': '',
     'node_use_dtrace': 'false',
     'node_use_etw': 'false',
     'node_use_mdb': 'false',
     'node_use_openssl': 'true',
     'node_use_perfctr': 'false',
-    'node_use_v8_platform': 'false',
+    'node_use_v8_platform': 'true',
     'node_use_bundled_v8': 'false',
+    'node_v8_path': '<(DEPTH)/chromium/v8/',
     'node_enable_d8': 'false',
     'uv_library': 'static_library',
     'uv_parent_path': 'vendor/node/deps/uv',
@@ -44,10 +58,17 @@
     'v8_postmortem_support': 'false',
     'v8_enable_i18n_support': 'false',
     'v8_inspector': 'false',
+    'v8_host_byteorder': '<!(python <(DEPTH)/tools/get-endianness.py)',
+    'v8_use_snapshot': 'true',
+    'v8_use_external_startup_data': 1,
   },
   # Settings to compile node under Windows.
   'target_defaults': {
     'target_conditions': [
+      ['_target_name in ["icuuc", "icui18n"]', {
+        'cflags_cc!': ['-fno-rtti']
+      }],
+
       ['_target_name in ["libuv", "http_parser", "openssl", "openssl-cli", "cares", "node", "zlib"]', {
         'msvs_disabled_warnings': [
           4003,  # not enough actual parameters for macro 'V'
@@ -128,6 +149,20 @@
         ],
       }],
       ['_target_name=="node"', {
+        'cflags!': [
+          '-fvisibility=hidden',
+          '-fdata-sections',
+          '-ffunction-sections',
+        ],
+        'cflags_cc!': [
+          '-fvisibility-inlines-hidden',
+        ],
+        'libraries': [
+          '-lz',
+          '-lhttp_parser',
+          '-lcrypto',
+          '-lssl',
+        ],
         'include_dirs': [
           '<(libchromiumcontent_src_dir)',
           '<(libchromiumcontent_src_dir)/third_party/icu/source/common',
@@ -167,7 +202,9 @@
               '-Wl,--no-whole-archive',
             ],
           }, {
-            'libraries': [ '<@(libchromiumcontent_v8_libraries)' ],
+            'libraries': [
+              '<@(libchromiumcontent_v8_libraries)',
+            ],
           }],
         ],
       }],
@@ -226,6 +263,21 @@
               4505,
             ],
           }],  # OS=="win"
+        ],
+      }],
+      ['_target_name=="shell_runner_host_lib"', {
+        'conditions': [
+          ['icu_use_data_file_flag==1', {
+            'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE'],
+          }, { # else icu_use_data_file_flag !=1
+            'conditions': [
+              ['OS=="win"', {
+                'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_SHARED'],
+              }, {
+                'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_STATIC'],
+              }],
+            ],
+          }],
         ],
       }],
     ],

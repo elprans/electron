@@ -9,7 +9,8 @@ BROWSERIFY = os.path.join(SOURCE_ROOT, 'node_modules', '.bin', 'browserify')
 if sys.platform == 'win32':
   BROWSERIFY += '.cmd'
 
-deps = subprocess.check_output([BROWSERIFY, '--list'] + sys.argv[1:])
+deps = subprocess.check_output([BROWSERIFY, '--list'] + sys.argv[1:],
+                               universal_newlines=True)
 for dep in deps.split('\n'):
     if dep:
         dep = os.path.relpath(dep, SOURCE_ROOT)
