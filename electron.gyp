@@ -31,6 +31,7 @@
       'dependencies': [
         'js2asar',
         'app2asar',
+        'nodebin',
         '<(project_name)_lib',
       ],
       'sources': [
@@ -165,7 +166,7 @@
           ],
         }, {
           'dependencies': [
-            'vendor/breakpad/breakpad.gyp:dump_syms#host',
+            'breakpad/breakpad.gyp:dump_syms#host',
           ],
         }],  # OS=="win"
         ['OS=="linux"', {
@@ -182,7 +183,7 @@
                   }, {
                     'copied_libraries': [
                       '<(PRODUCT_DIR)/lib/libnode.so',
-                      '<(libchromiumcontent_dir)/libffmpeg.so',
+                      '<(PRODUCT_DIR)/lib/libv8.so',
                     ],
                   }],
                 ],
@@ -190,13 +191,8 @@
               'destination': '<(PRODUCT_DIR)',
               'files': [
                 '<@(copied_libraries)',
-                '<(libchromiumcontent_dir)/locales',
-                '<(libchromiumcontent_dir)/icudtl.dat',
-                '<(libchromiumcontent_dir)/blink_image_resources_200_percent.pak',
-                '<(libchromiumcontent_dir)/content_resources_200_percent.pak',
+                '<(libchromiumcontent_dir)/repack/chrome_200_percent.pak',
                 '<(libchromiumcontent_dir)/content_shell.pak',
-                '<(libchromiumcontent_dir)/ui_resources_200_percent.pak',
-                '<(libchromiumcontent_dir)/views_resources_200_percent.pak',
                 '<(libchromiumcontent_dir)/natives_blob.bin',
                 '<(libchromiumcontent_dir)/snapshot_blob.bin',
               ],
@@ -231,15 +227,14 @@
         '<@(lib_sources)',
       ],
       'include_dirs': [
-        '.',
         'chromium_src',
+        '.',
         'vendor/brightray',
         'vendor/native_mate',
         # Include atom_natives.h.
         '<(SHARED_INTERMEDIATE_DIR)',
         # Include directories for uv and node.
         'vendor/node/src',
-        'vendor/node/deps/http_parser',
         'vendor/node/deps/uv/include',
         # The `node.h` is using `#include"v8.h"`.
         '<(libchromiumcontent_src_dir)/v8/include',
@@ -292,8 +287,8 @@
             'vendor/node/deps/uv/uv.gyp:libuv',
             'vendor/node/deps/zlib/zlib.gyp:zlib',
             # Build with breakpad support.
-            'vendor/breakpad/breakpad.gyp:breakpad_handler',
-            'vendor/breakpad/breakpad.gyp:breakpad_sender',
+            'breakpad/breakpad.gyp:breakpad_handler',
+            'breakpad/breakpad.gyp:breakpad_sender',
           ],
         }],  # OS=="win"
         ['OS=="mac" and mas_build==0', {
@@ -331,7 +326,7 @@
               # Make binary search for libraries under current directory, so we
               # don't have to manually set $LD_LIBRARY_PATH:
               # http://serverfault.com/questions/279068/cant-find-so-in-the-same-directory-as-the-executable
-              '-rpath \$$ORIGIN',
+              '-Wl,-rpath=\$$ORIGIN/',
               # Make native module dynamic loading work.
               '-rdynamic',
             ],
@@ -342,10 +337,10 @@
             '-Wno-reserved-user-defined-literal',
           ],
           'include_dirs': [
-            'vendor/breakpad/src',
+            'breakpad/src',
           ],
           'dependencies': [
-            'vendor/breakpad/breakpad.gyp:breakpad_client',
+            'breakpad/breakpad.gyp:breakpad_client',
           ],
         }],  # OS=="linux"
       ],
@@ -353,6 +348,9 @@
     {
       'target_name': 'js2asar',
       'type': 'none',
+      'dependencies': [
+        'nodebin'
+      ],
       'actions': [
         {
           'action_name': 'js2asar',
@@ -374,6 +372,7 @@
           'action': [
             'python',
             'tools/js2asar.py',
+            '<(PRODUCT_DIR)/nodebin',
             '<@(_outputs)',
             'lib',
             '<@(_inputs)',
@@ -384,6 +383,9 @@
     {
       'target_name': 'app2asar',
       'type': 'none',
+      'dependencies': [
+        'nodebin'
+      ],
       'actions': [
         {
           'action_name': 'app2asar',
@@ -405,6 +407,7 @@
           'action': [
             'python',
             'tools/js2asar.py',
+            '<(PRODUCT_DIR)/nodebin',
             '<@(_outputs)',
             'default_app',
             '<@(_inputs)',
@@ -430,6 +433,7 @@
       'dependencies': [
         # depend on this target to ensure the '<(js2c_input_dir)' is created
         'atom_js2c_copy',
+        'nodebin'
       ],
       'actions': [
         {
@@ -441,13 +445,10 @@
             '<(js2c_input_dir)/preload_bundle.js',
           ],
           'action': [
-            'npm',
-            'run',
-            '--silent',
-            'browserify',
-            '--',
+            'python',
+            'tools/browserify.py',
+            '<(PRODUCT_DIR)/nodebin',
             'lib/sandboxed_renderer/init.js',
-            '-o',
             '<@(_outputs)',
           ],
         },
@@ -460,13 +461,10 @@
             '<(js2c_input_dir)/isolated_bundle.js',
           ],
           'action': [
-            'npm',
-            'run',
-            '--silent',
-            'browserify',
-            '--',
+            'python',
+            'tools/browserify.py',
+            '<(PRODUCT_DIR)/nodebin',
             'lib/isolated_renderer/init.js',
-            '-o',
             '<@(_outputs)',
           ],
         },
@@ -500,6 +498,36 @@
         }
       ],
     },  # target atom_js2c
+    {
+      'target_name': 'nodebin',
+      'type': 'executable',
+      'sources': [
+        'vendor/node/src/node_main.cc',
+      ],
+      'dependencies': [
+        'vendor/node/node.gyp:node',
+      ],
+      'include_dirs': [
+        '.',
+        'vendor/native_mate',
+        # Include atom_natives.h.
+        '<(SHARED_INTERMEDIATE_DIR)',
+        # Include directories for uv and node.
+        'vendor/node/src',
+        'vendor/node/deps/uv/include',
+        # The `node.h` is using `#include"v8.h"`.
+        '<(libchromiumcontent_src_dir)/v8/include',
+        # The `node.h` is using `#include"ares.h"`.
+        'vendor/node/deps/cares/include',
+      ],
+      'link_settings': {
+        'ldflags': [
+          '-Wl,-rpath=\$$ORIGIN/',
+          # Make native module dynamic loading work.
+          '-rdynamic',
+        ],
+      },
+    },  # target nodebin
   ],
   'conditions': [
     ['OS=="mac"', {
