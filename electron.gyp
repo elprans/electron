@@ -162,7 +162,7 @@
           ],
         }, {
           'dependencies': [
-            'vendor/breakpad/breakpad.gyp:dump_syms#host',
+            'breakpad/breakpad.gyp:dump_syms#host',
           ],
         }],  # OS=="win"
         ['OS=="linux"', {
@@ -179,7 +179,7 @@
                   }, {
                     'copied_libraries': [
                       '<(PRODUCT_DIR)/lib/libnode.so',
-                      '<(libchromiumcontent_dir)/libffmpeg.so',
+                      '<(PRODUCT_DIR)/lib/libv8.so',
                     ],
                   }],
                 ],
@@ -187,9 +187,6 @@
               'destination': '<(PRODUCT_DIR)',
               'files': [
                 '<@(copied_libraries)',
-                '<(libchromiumcontent_dir)/locales',
-                '<(libchromiumcontent_dir)/icudtl.dat',
-                '<(libchromiumcontent_dir)/content_shell.pak',
                 '<(libchromiumcontent_dir)/natives_blob.bin',
                 '<(libchromiumcontent_dir)/snapshot_blob.bin',
               ],
@@ -221,8 +218,8 @@
         '<@(lib_sources)',
       ],
       'include_dirs': [
-        '.',
         'chromium_src',
+        '.',
         'vendor/brightray',
         'vendor/native_mate',
         # Include atom_natives.h.
@@ -280,8 +277,8 @@
             'vendor/node/deps/uv/uv.gyp:libuv',
             'vendor/node/deps/zlib/zlib.gyp:zlib',
             # Build with breakpad support.
-            'vendor/breakpad/breakpad.gyp:breakpad_handler',
-            'vendor/breakpad/breakpad.gyp:breakpad_sender',
+            'breakpad/breakpad.gyp:breakpad_handler',
+            'breakpad/breakpad.gyp:breakpad_sender',
           ],
         }],  # OS=="win"
         ['OS=="mac" and mas_build==0', {
@@ -319,7 +316,7 @@
               # Make binary search for libraries under current directory, so we
               # don't have to manually set $LD_LIBRARY_PATH:
               # http://serverfault.com/questions/279068/cant-find-so-in-the-same-directory-as-the-executable
-              '-rpath \$$ORIGIN',
+              '-Wl,-rpath=\$$ORIGIN/',
               # Make native module dynamic loading work.
               '-rdynamic',
             ],
@@ -330,10 +327,10 @@
             '-Wno-reserved-user-defined-literal',
           ],
           'include_dirs': [
-            'vendor/breakpad/src',
+            'breakpad/src',
           ],
           'dependencies': [
-            'vendor/breakpad/breakpad.gyp:breakpad_client',
+            'breakpad/breakpad.gyp:breakpad_client',
           ],
         }],  # OS=="linux"
       ],
