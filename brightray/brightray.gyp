@@ -1,7 +1,7 @@
 {
   'variables': {
     # The libraries brightray will be compiled to.
-    'linux_system_libraries': 'gtk+-3.0 dbus-1 x11 x11-xcb xcb xi xcursor xdamage xrandr xcomposite xext xfixes xrender xtst xscrnsaver gconf-2.0 gmodule-2.0 nss',
+    'linux_system_libraries': 'gtk+-3.0 dbus-1 x11 x11-xcb xcb xi xcursor xdamage xrandr xcomposite xext xfixes xrender xtst xscrnsaver gmodule-2.0 nss',
     'conditions': [
       ['target_arch=="mips64el"', {
         'linux_system_libraries': '<(linux_system_libraries) libpulse',
@@ -14,6 +14,11 @@
   'targets': [
     {
       'target_name': 'brightray',
+      'dependencies': [
+        'cups',
+        'gconf',
+        'icu',
+      ],
       'type': 'static_library',
       'include_dirs': [
         '..',
@@ -46,14 +51,13 @@
       'conditions': [
         # Link with libraries of libchromiumcontent.
         ['OS=="linux" and libchromiumcontent_component==0', {
-          # On Linux we have to use "--whole-archive" to force executable
-          # to include all symbols, otherwise we will have plenty of
+          # On Linux we have to use "--start-group", otherwise we will have plenty of
           # unresolved symbols errors.
-          'direct_dependent_settings': {
-            'ldflags': [
-              '-Wl,--whole-archive',
+          'link_settings': {
+            'libraries': [
+              '-Wl,--start-group',
               '<@(libchromiumcontent_libraries)',
-              '-Wl,--no-whole-archive',
+              '-Wl,--end-group',
             ],
           }
         }, {  # (Release build on Linux)
@@ -122,7 +126,7 @@
                   # On Linux we have to use "--whole-archive" to include
                   # all symbols, otherwise there will be plenty of
                   # unresolved symbols errors.
-                  '-Wl,--whole-archive',
+                  '-Wl,--start-group',
                   '<(libchromiumcontent_dir)/libpdf.a',
                   '<(libchromiumcontent_dir)/libppapi_cpp_objects.a',
                   '<(libchromiumcontent_dir)/libppapi_internal_module.a',
@@ -143,23 +147,39 @@
                   '<(libchromiumcontent_dir)/libfx_lcms2.a',
                   '<(libchromiumcontent_dir)/libfx_libopenjpeg.a',
                   '<(libchromiumcontent_dir)/libfx_zlib.a',
-                  '-Wl,--no-whole-archive',
+                  '-Wl,--end-group',
                 ],
               },
             }, {
               'link_settings': {
                 'libraries': [
-                  # Link with ffmpeg.
-                  '<(libchromiumcontent_dir)/libffmpeg.so',
                   # Following libraries are required by libchromiumcontent:
                   '-lasound',
                   '-lcap',
-                  '-lcups',
                   '-lrt',
                   '-ldl',
+                  '-lz',
                   '-lresolv',
                   '-lfontconfig',
                   '-lexpat',
+                  '-lre2',
+                  '-ljpeg',
+                  '-lsnappy',
+                  '-lharfbuzz',
+                  '-lpng',
+                  '-lxml2',
+                  '-lxslt',
+                  '-lwebp',
+                  '-lwebpdemux',
+                  '-lwebpmux',
+                  '-lavcodec',
+                  '-lavformat',
+                  '-lavutil',
+                  '-lvpx',
+                  '-lFLAC',
+                  '-lopus',
+                  '-lopenh264',
+                  '-lminizip',
                 ],
               },
             }],
@@ -179,8 +199,6 @@
               # Required by webrtc:
               '$(SDKROOT)/System/Library/Frameworks/OpenGL.framework',
               '$(SDKROOT)/System/Library/Frameworks/IOKit.framework',
-              # Required by media:
-              '$(SDKROOT)/System/Library/Frameworks/VideoToolbox.framework',
             ],
           },
           'conditions':  [
@@ -267,8 +285,6 @@
                   '$(SDKROOT)/System/Library/Frameworks/IOBluetooth.framework',
                   # components/wifi/BUILD.gn:
                   '$(SDKROOT)/System/Library/Frameworks/CoreWLAN.framework',
-                  # printing/BUILD.gn:
-                  '-lcups',
                 ],
               },
             }],
@@ -434,6 +450,65 @@
             }],  # libchromiumcontent_component
           ],
         }],  # OS=="win"
+      ],
+    },
+    {
+      'target_name': 'gconf',
+      'type': 'none',
+      'conditions': [
+        ['use_gconf==1 and _toolset=="target"', {
+          'direct_dependent_settings': {
+            'cflags': [
+              '<!@(<(pkg-config) --cflags gconf-2.0)',
+            ],
+            'defines': [
+              'USE_GCONF',
+            ],
+          },
+          'link_settings': {
+            'ldflags': [
+              '<!@(<(pkg-config) --libs-only-L --libs-only-other gconf-2.0)',
+            ],
+            'libraries': [
+              '<!@(<(pkg-config) --libs-only-l gconf-2.0)',
+            ],
+          },
+        }],
+      ],
+    },
+    {
+      'target_name': 'cups',
+      'type': 'none',
+      'conditions': [
+        ['use_cups==1', {
+          'direct_dependent_settings': {
+            'defines': [
+              'USE_CUPS',
+            ],
+            'link_settings': {
+              'libraries': [
+                '-lcups',
+              ],
+            },
+          },
+        }],
+      ],
+    },
+    {
+      'target_name': 'icu',
+      'type': 'none',
+      'conditions': [
+        ['use_system_icu==1', {
+          'direct_dependent_settings': {
+            'link_settings': {
+              'libraries': [
+                '-licui18n',
+                '-licuuc',
+                '-licudata',
+              ],
+            },
+          },
+        }],
       ],
     },
   ],

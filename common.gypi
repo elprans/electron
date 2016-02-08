@@ -2,6 +2,7 @@
   'includes': [
     'toolchain.gypi',
     'brightray/brightray.gypi',
+    'vendor/node/common.gypi',
   ],
   'variables': {
     # Tell crashpad to build as external project.
@@ -19,25 +20,22 @@
     'use_openssl_def': 0,
     'OPENSSL_PRODUCT': 'libopenssl.a',
     'node_release_urlbase': 'https://atom.io/download/electron',
-    'node_byteorder': '<!(node <(DEPTH)/tools/get-endianness.js)',
+    'node_byteorder': '<!(python <(DEPTH)/tools/get-endianness.py)',
     'node_target_type': 'shared_library',
+    'node_module_version': '',
     'node_install_npm': 'false',
     'node_prefix': '',
     'node_shared': 'true',
-    'node_shared_cares': 'false',
-    'node_shared_http_parser': 'false',
-    'node_shared_libuv': 'false',
-    'node_shared_openssl': 'false',
     'node_shared_v8': 'true',
-    'node_shared_zlib': 'false',
     'node_tag': '',
     'node_use_dtrace': 'false',
     'node_use_etw': 'false',
     'node_use_mdb': 'false',
     'node_use_openssl': 'true',
     'node_use_perfctr': 'false',
-    'node_use_v8_platform': 'false',
+    'node_use_v8_platform': 'true',
     'node_use_bundled_v8': 'false',
+    'node_v8_path': '<(DEPTH)/chromium/v8/',
     'node_enable_d8': 'false',
     'uv_library': 'static_library',
     'uv_parent_path': 'vendor/node/deps/uv',
@@ -46,10 +44,15 @@
     'v8_postmortem_support': 'false',
     'v8_enable_i18n_support': 'false',
     'v8_enable_inspector': '1',
+    'v8_use_snapshot': 'true',
+    'v8_use_external_startup_data': 1,
   },
   # Settings to compile node under Windows.
   'target_defaults': {
     'target_conditions': [
+      ['_target_name in ["icuuc", "icui18n"]', {
+        'cflags_cc!': ['-fno-rtti']
+      }],
       ['_target_name in ["libuv", "http_parser", "openssl", "openssl-cli", "cares", "node", "zlib", "nghttp2"]', {
         'msvs_disabled_warnings': [
           4003,  # not enough actual parameters for macro 'V'
@@ -135,6 +138,14 @@
         ],
       }],
       ['_target_name=="node"', {
+        'cflags!': [
+          '-fvisibility=hidden',
+          '-fdata-sections',
+          '-ffunction-sections',
+        ],
+        'cflags_cc!': [
+          '-fvisibility-inlines-hidden',
+        ],
         'include_dirs': [
           '<(libchromiumcontent_src_dir)',
           '<(libchromiumcontent_src_dir)/third_party/icu/source/common',
@@ -176,9 +187,9 @@
           ['OS=="linux" and libchromiumcontent_component==0', {
             # Prevent the linker from stripping symbols.
             'ldflags': [
-              '-Wl,--whole-archive',
+              '-Wl,--start-group',
               '<@(libchromiumcontent_v8_libraries)',
-              '-Wl,--no-whole-archive',
+              '-Wl,--end-group',
             ],
           }, {
             'libraries': [ '<@(libchromiumcontent_v8_libraries)' ],
@@ -240,6 +251,21 @@
               4505,
             ],
           }],  # OS=="win"
+        ],
+      }],
+      ['_target_name=="shell_runner_host_lib"', {
+        'conditions': [
+          ['icu_use_data_file_flag==1', {
+            'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE'],
+          }, { # else icu_use_data_file_flag !=1
+            'conditions': [
+              ['OS=="win"', {
+                'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_SHARED'],
+              }, {
+                'defines': ['ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_STATIC'],
+              }],
+            ],
+          }],
         ],
       }],
     ],

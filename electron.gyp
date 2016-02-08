@@ -215,7 +215,7 @@
                   }, {
                     'copied_libraries': [
                       '<(PRODUCT_DIR)/lib/libnode.so',
-                      '<(libchromiumcontent_dir)/libffmpeg.so',
+                      '<@(libchromiumcontent_shared_v8_libraries)',
                     ],
                   }],
                 ],
@@ -272,8 +272,8 @@
         '<@(lib_sources)',
       ],
       'include_dirs': [
-        '.',
         'chromium_src',
+        '.',
         'vendor/native_mate',
         # libicu headers shim.
         '<(SHARED_INTERMEDIATE_DIR)/shim_headers/icui18n_shim',
@@ -282,7 +282,6 @@
         '<(SHARED_INTERMEDIATE_DIR)',
         # Include directories for uv and node.
         'vendor/node/src',
-        'vendor/node/deps/http_parser',
         'vendor/node/deps/uv/include',
         # The `node.h` is using `#include"v8.h"`.
         '<(libchromiumcontent_src_dir)/v8/include',
@@ -372,6 +371,7 @@
             '<@(lib_sources_nss)',
           ],
           'link_settings': {
+            'libraries': [ '<@(libchromiumcontent_v8_libraries)' ],
             'ldflags': [
               # Make binary search for libraries under current directory, so we
               # don't have to manually set $LD_LIBRARY_PATH:
@@ -403,6 +403,9 @@
     {
       'target_name': 'js2asar',
       'type': 'none',
+      'dependencies': [
+        'nodebin'
+      ],
       'actions': [
         {
           'action_name': 'js2asar',
@@ -424,6 +427,7 @@
           'action': [
             'python',
             'tools/js2asar.py',
+            '<(PRODUCT_DIR)/nodebin',
             '<@(_outputs)',
             'lib',
             '<@(_inputs)',
@@ -434,6 +438,9 @@
     {
       'target_name': 'app2asar',
       'type': 'none',
+      'dependencies': [
+        'nodebin'
+      ],
       'actions': [
         {
           'action_name': 'app2asar',
@@ -455,6 +462,7 @@
           'action': [
             'python',
             'tools/js2asar.py',
+            '<(PRODUCT_DIR)/nodebin',
             '<@(_outputs)',
             'default_app',
             '<@(_inputs)',
@@ -480,6 +488,7 @@
       'dependencies': [
         # depend on this target to ensure the '<(js2c_input_dir)' is created
         'atom_js2c_copy',
+        'nodebin'
       ],
       'variables': {
         'sandbox_args': [
@@ -509,11 +518,9 @@
             '<(js2c_input_dir)/preload_bundle.js',
           ],
           'action': [
-            'npm',
-            'run',
-            '--silent',
-            'browserify',
-            '--',
+            'python',
+            'tools/browserify.py',
+            '<(PRODUCT_DIR)/nodebin',
             '<@(sandbox_args)',
             '-o',
             '<@(_outputs)',
@@ -528,12 +535,11 @@
             '<(js2c_input_dir)/isolated_bundle.js',
           ],
           'action': [
-            'npm',
-            'run',
-            '--silent',
-            'browserify',
-            '--',
+            'python',
+            'tools/browserify.py',
+            '<(PRODUCT_DIR)/nodebin',
             '<@(isolated_args)',
+            'lib/isolated_renderer/init.js',
             '-o',
             '<@(_outputs)',
           ],
@@ -568,6 +574,42 @@
         }
       ],
     },  # target atom_js2c
+    {
+      'target_name': 'nodebin',
+      'type': 'executable',
+      'defines': [
+        'ELECTRON_NODE_BUILD_NO_ASAR'
+      ],
+      'sources': [
+        'vendor/node/src/node_main.cc',
+      ],
+      'dependencies': [
+        'vendor/node/node.gyp:node',
+      ],
+      'include_dirs': [
+        '.',
+        '<(node_v8_path)/include',
+        'vendor/native_mate',
+        # Include atom_natives.h.
+        '<(SHARED_INTERMEDIATE_DIR)',
+        # Include directories for uv and node.
+        'vendor/node/src',
+        'vendor/node/deps/uv/include',
+        '<(libchromiumcontent_src_dir)',
+        # The `node.h` is using `#include"v8.h"`.
+        '<(libchromiumcontent_src_dir)/v8/include',
+        # The `node.h` is using `#include"ares.h"`.
+        'vendor/node/deps/cares/include',
+      ],
+      'link_settings': {
+        'libraries': [ '<@(libchromiumcontent_v8_libraries)' ],
+        'ldflags': [
+          '-Wl,-rpath=\$$ORIGIN/',
+          # Make native module dynamic loading work.
+          '-rdynamic',
+        ],
+      },
+    },  # target nodebin
   ],
   'conditions': [
     ['OS=="mac"', {

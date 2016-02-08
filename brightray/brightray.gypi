@@ -1,6 +1,6 @@
 {
   'includes': [
-    '../vendor/download/libchromiumcontent/filenames.gypi',
+    '../vendor/libchromiumcontent/dist/main/filenames.gypi',
   ],
   'variables': {
     'libchromiumcontent_component%': 1,
@@ -14,7 +14,7 @@
       }, {
         'libchromiumcontent_dir%': '<(libchromiumcontent_static_libraries_dir)',
         'libchromiumcontent_libraries%': '<(libchromiumcontent_static_libraries)',
-        'libchromiumcontent_v8_libraries%': '<(libchromiumcontent_static_v8_libraries)',
+        'libchromiumcontent_v8_libraries%': '<(libchromiumcontent_shared_v8_libraries)',
       }],
     ],
   },
@@ -268,26 +268,16 @@
         'conditions': [
           ['OS=="linux"', {
             'cflags': [
-              '-O2',
-              # Generate symbols, will be stripped later.
-              '-g',
-              # Don't emit the GCC version ident directives, they just end up
-              # in the .comment section taking up binary size.
-              '-fno-ident',
               # Put data and code in their own sections, so that unused symbols
               # can be removed at link time with --gc-sections.
               '-fdata-sections',
               '-ffunction-sections',
             ],
             'ldflags': [
-              # Specifically tell the linker to perform optimizations.
-              # See http://lwn.net/Articles/192624/ .
-              '-Wl,-O1',
-              '-Wl,--as-needed',
               '-Wl,--gc-sections',
             ],
           }],  # OS=="linux"
-          ['OS=="linux" and target_arch in ["ia32", "x64", "arm64"]', {
+          ['use_lto==1 and OS=="linux" and target_arch in ["ia32", "x64", "arm64"] and clang==1', {
             'cflags': [
               '-flto=thin',
             ],
@@ -298,6 +288,20 @@
               '-Wl,--lto-O0',  # this could be removed in future; see https://codereview.chromium.org/2939923004
               '-Wl,-mllvm,-function-sections',
               '-Wl,-mllvm,-data-sections',
+            ],
+          }],
+          ['use_lto==1 and OS=="linux" and target_arch in ["ia32", "x64", "arm64"] and clang==0', {
+            'cflags': [
+              '-flto',
+              '-fno-fat-lto-objects',
+              '-fuse-linker-plugin',
+              '--param=lto-partitions=1',
+            ],
+            'ldflags': [
+              '-flto',
+              '-fno-fat-lto-objects',
+              '-fuse-linker-plugin',
+              '--param=lto-partitions=1',
             ],
           }],
         ],
