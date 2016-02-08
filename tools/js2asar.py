@@ -11,12 +11,13 @@ SOURCE_ROOT = os.path.dirname(os.path.dirname(__file__))
 
 
 def main():
-  archive = sys.argv[1]
-  js_source_files = sys.argv[2:]
+  node = sys.argv[1]
+  archive = sys.argv[2]
+  js_source_files = sys.argv[3:]
 
   output_dir = tempfile.mkdtemp()
   copy_js(js_source_files, output_dir)
-  call_asar(archive, output_dir)
+  call_asar(node, archive, output_dir)
   shutil.rmtree(output_dir)
 
 
@@ -28,10 +29,10 @@ def copy_js(js_source_files, output_dir):
     shutil.copy2(source_file, output_path)
 
 
-def call_asar(archive, output_dir):
+def call_asar(node, archive, output_dir):
   js_dir = os.path.join(output_dir, 'lib')
   asar = os.path.join(SOURCE_ROOT, 'node_modules', 'asar', 'bin', 'asar')
-  subprocess.check_call([find_node(), asar, 'pack', js_dir, archive])
+  subprocess.check_call([node, asar, 'pack', js_dir, archive])
 
 
 def find_node():
