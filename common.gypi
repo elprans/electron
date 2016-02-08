@@ -15,16 +15,11 @@
     'openssl_fips': '',
     'openssl_no_asm': 1,
     'node_release_urlbase': 'https://atom.io/download/atom-shell',
-    'node_byteorder': '<!(node <(DEPTH)/tools/get-endianness.js)',
+    'node_byteorder': '<!(python <(DEPTH)/tools/get-endianness.py)',
     'node_target_type': 'shared_library',
     'node_install_npm': 'false',
     'node_prefix': '',
-    'node_shared_cares': 'false',
-    'node_shared_http_parser': 'false',
-    'node_shared_libuv': 'false',
-    'node_shared_openssl': 'false',
     'node_shared_v8': 'true',
-    'node_shared_zlib': 'false',
     'node_tag': '',
     'node_use_dtrace': 'false',
     'node_use_etw': 'false',
@@ -36,11 +31,34 @@
     'uv_use_dtrace': 'false',
     'V8_BASE': '',
     'v8_postmortem_support': 'false',
-    'v8_enable_i18n_support': 'false',
+    'v8_enable_i18n_support': 'true',
+    'v8_gyp_path': '<(DEPTH)/v8/tools/gyp/v8.gyp',
+    'v8_libraries': '["v8", "v8_snapshot", "v8_nosnapshot", "v8_external_snapshot", "v8_base", "v8_libbase", "v8_libplatform"]',
+    'v8_target_type': 'shared_library',
+    'v8_use_snapshot': 'true',
+    'v8_use_external_startup_data': 1,
   },
   # Settings to compile node under Windows.
   'target_defaults': {
     'target_conditions': [
+      ['_target_name in <(v8_libraries) + ["node", "electron_lib"]', {
+        'cflags!': [
+          '-fvisibility=hidden',
+          '-fdata-sections',
+          '-ffunction-sections',
+        ],
+        'cflags_cc!': [
+          '-fvisibility-inlines-hidden'
+        ],
+      }],
+
+      ['_target_name in <(v8_libraries) + ["mksnapshot"]', {
+        'defines': [
+          'V8_SHARED',
+          'BUILDING_V8_SHARED',
+        ],
+      }],
+
       ['_target_name in ["libuv", "http_parser", "openssl", "cares", "node", "zlib"]', {
         'msvs_disabled_warnings': [
           4003,  # not enough actual parameters for macro 'V'
