@@ -206,7 +206,6 @@
               'files': [
                 '<@(copied_libraries)',
                 '<(libchromiumcontent_dir)/locales',
-                '<(libchromiumcontent_dir)/icudtl.dat',
                 '<(libchromiumcontent_dir)/blink_image_resources_200_percent.pak',
                 '<(libchromiumcontent_dir)/content_resources_200_percent.pak',
                 '<(libchromiumcontent_dir)/content_shell.pak',
@@ -257,6 +256,9 @@
         'chromium_src',
         '.',
         'vendor/native_mate',
+        # libicu headers shim.
+        '<(SHARED_INTERMEDIATE_DIR)/shim_headers/icui18n_shim',
+        '<(SHARED_INTERMEDIATE_DIR)/shim_headers/icuuc_shim',
         # Include atom_natives.h.
         '<(SHARED_INTERMEDIATE_DIR)',
         # Include directories for uv and node.
