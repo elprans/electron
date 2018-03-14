@@ -342,7 +342,7 @@ void DoCacheActionInIO(
     on_get_backend.Run(net::OK);
 }
 
-void SetProxyInIO(net::URLRequestContextGetter* getter,
+void SetProxyInIO(scoped_refptr<net::URLRequestContextGetter> getter,
                   const net::ProxyConfig& config,
                   const base::Closure& callback) {
   auto proxy_service = getter->GetURLRequestContext()->proxy_service();
@@ -452,6 +452,15 @@ void SetDevToolsNetworkEmulationClientIdInIO(
   network_delegate->SetDevToolsNetworkEmulationClientId(client_id);
 }
 
+// Clear protocol handlers in IO thread.
+void ClearJobFactoryInIO(
+    scoped_refptr<brightray::URLRequestContextGetter> request_context_getter) {
+  auto job_factory = static_cast<AtomURLRequestJobFactory*>(
+      request_context_getter->job_factory());
+  if (job_factory)
+    job_factory->Clear();
+}
+
 }  // namespace
 
 Session::Session(v8::Isolate* isolate, AtomBrowserContext* browser_context)
@@ -468,6 +477,10 @@ Session::Session(v8::Isolate* isolate, AtomBrowserContext* browser_context)
 }
 
 Session::~Session() {
+  auto getter = browser_context_->GetRequestContext();
+  content::BrowserThread::PostTask(
+      content::BrowserThread::IO, FROM_HERE,
+      base::BindOnce(ClearJobFactoryInIO, base::RetainedRef(getter)));
   content::BrowserContext::GetDownloadManager(browser_context())->
       RemoveObserver(this);
   g_sessions.erase(weak_map_id());
@@ -532,9 +545,11 @@ void Session::FlushStorageData() {
 
 void Session::SetProxy(const net::ProxyConfig& config,
                        const base::Closure& callback) {
-  auto getter = browser_context_->GetRequestContext();
-  BrowserThread::PostTask(BrowserThread::IO, FROM_HERE,
-      base::Bind(&SetProxyInIO, base::Unretained(getter), config, callback));
+  scoped_refptr<net::URLRequestContextGetter> getter =
+      browser_context_->GetRequestContext();
+  BrowserThread::PostTask(
+      BrowserThread::IO, FROM_HERE,
+      base::BindOnce(&SetProxyInIO, getter, config, callback));
 }
 
 void Session::SetDownloadPath(const base::FilePath& path) {
