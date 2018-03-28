@@ -2,6 +2,8 @@
 // Use of this source code is governed by the MIT license that can be
 // found in the LICENSE file.
 
+#include <glib/gi18n.h>
+
 #include "atom/browser/ui/message_box.h"
 
 #include "atom/browser/browser.h"
@@ -126,13 +128,13 @@ class GtkMessageBox : public NativeWindowObserver {
   const char* TranslateToStock(int id, const std::string& text) {
     std::string lower = base::ToLowerASCII(text);
     if (lower == "cancel")
-      return GTK_STOCK_CANCEL;
+      return _("_Cancel");
     else if (lower == "no")
-      return GTK_STOCK_NO;
+      return _("_No");
     else if (lower == "ok")
-      return GTK_STOCK_OK;
+      return _("_OK");
     else if (lower == "yes")
-      return GTK_STOCK_YES;
+      return _("_Yes");
     else
       return text.c_str();
   }
@@ -197,7 +199,7 @@ void GtkMessageBox::OnResponseDialog(GtkWidget* widget, int response) {
 }
 
 void GtkMessageBox::OnCheckboxToggled(GtkWidget* widget) {
-  checkbox_checked_ = GTK_TOGGLE_BUTTON(widget)->active;
+  checkbox_checked_ = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 }
 
 }  // namespace

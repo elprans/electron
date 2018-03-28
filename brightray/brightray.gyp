@@ -1,7 +1,15 @@
 {
   'variables': {
     # The libraries brightray will be compiled to.
-    'linux_system_libraries': 'gtk+-2.0 dbus-1 x11 x11-xcb xcb xi xcursor xdamage xrandr xcomposite xext xfixes xrender xtst xscrnsaver gmodule-2.0 nss'
+    'linux_system_libraries': 'dbus-1 x11 x11-xcb xcb xi xcursor xdamage xrandr xcomposite xext xfixes xrender xtst xscrnsaver gmodule-2.0 nss',
+    'conditions': [
+      ['use_gtk3==1', {
+        'linux_system_libraries': '<(linux_system_libraries) gtk+-3.0',
+      }],
+      ['use_gtk3==0', {
+        'linux_system_libraries': '<(linux_system_libraries) gtk+-2.0',
+      }],
+    ],
   },
   'includes': [
     'filenames.gypi',
