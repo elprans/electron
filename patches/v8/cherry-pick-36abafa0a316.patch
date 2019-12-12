@@ -48,24 +48,6 @@ index b34076025f07ff5b4fadb8800c44acefa5480d19..d9abe45124f176d9ea7ab931a8247fbb
 +        MessageTemplate::kDataCloneErrorNonDetachableArrayBuffer);
 +    return Nothing<bool>();
 +  }
- 
+
    uint32_t* transfer_entry = array_buffer_transfer_map_.Find(array_buffer);
    if (transfer_entry) {
-diff --git a/test/mjsunit/wasm/worker-memory.js b/test/mjsunit/wasm/worker-memory.js
-index c5b99ede7e28364bbbe31165dfd8b8449a718137..bf5430f7139815c229e641eb6d40725b066035c5 100644
---- a/test/mjsunit/wasm/worker-memory.js
-+++ b/test/mjsunit/wasm/worker-memory.js
-@@ -11,6 +11,13 @@
-   assertThrows(() => worker.postMessage(memory), Error);
- })();
- 
-+(function TestPostMessageUnsharedMemoryBuffer() {
-+  let worker = new Worker('', {type: 'string'});
-+  let memory = new WebAssembly.Memory({initial: 1, maximum: 2});
-+
-+  assertThrows(() => worker.postMessage(memory.buffer), Error);
-+})();
-+
- // Can't use assert in a worker.
- let workerHelpers =
-   `function assertTrue(value, msg) {

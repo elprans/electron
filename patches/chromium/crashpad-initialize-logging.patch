@@ -119,28 +119,3 @@ index 33649291e253a7a9bd281b892bab415ff1950b6a..a3ba9bb17e221e8330b09eae572d116b
  
    InstallCrashHandler();
    CallMetricsRecordNormalExit metrics_record_normal_exit;
-diff --git a/third_party/crashpad/crashpad/test/gtest_main.cc b/third_party/crashpad/crashpad/test/gtest_main.cc
-index 67cfa0d72d7eb469775201f3a9df906f27c302a9..c67b8e24bb940935d5da88428ed3058a135f5a57 100644
---- a/third_party/crashpad/crashpad/test/gtest_main.cc
-+++ b/third_party/crashpad/crashpad/test/gtest_main.cc
-@@ -12,6 +12,7 @@
- // See the License for the specific language governing permissions and
- // limitations under the License.
- 
-+#include "base/logging.h"
- #include "build/build_config.h"
- #include "gtest/gtest.h"
- #include "test/main_arguments.h"
-@@ -99,6 +100,12 @@ int main(int argc, char* argv[]) {
- 
- #endif  // CRASHPAD_IS_IN_CHROMIUM
- 
-+  // base::TestSuite initializes logging when using Chromium's test launcher.
-+  logging::LoggingSettings settings;
-+  settings.logging_dest =
-+      logging::LOG_TO_STDERR | logging::LOG_TO_SYSTEM_DEBUG_LOG;
-+  logging::InitLogging(settings);
-+
- #if defined(CRASHPAD_TEST_LAUNCHER_GOOGLEMOCK)
-   testing::InitGoogleMock(&argc, argv);
- #elif defined(CRASHPAD_TEST_LAUNCHER_GOOGLETEST)
