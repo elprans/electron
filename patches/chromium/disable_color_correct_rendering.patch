@@ -274,6 +274,7 @@ index 1aedba288aed698fd1b7ac6a4ef1a67fc892f84a..df2b5b120483225c2bd21a337e6085db
  #include "third_party/skia/include/core/SkSurfaceProps.h"
  #include "ui/gfx/color_space.h"
 +#include "ui/gfx/switches.h"
++#include "base/command_line.h"
  
  namespace blink {
  
