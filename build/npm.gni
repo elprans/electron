@@ -33,7 +33,6 @@ template("npm_action") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":npm_pre_flight_" + target_name ]
 
     script = "//electron/build/npm-run.py"
     args = [
