@@ -11,7 +11,7 @@ diff --git a/common.gypi b/common.gypi
 index 223043e55194c32493ccb9913295ec65d09a270c..bb60a045c1132bf3a16d0b773ba34e5e9efb0f0c 100644
 --- a/common.gypi
 +++ b/common.gypi
-@@ -72,6 +72,22 @@
+@@ -72,6 +72,23 @@
  
      ##### end V8 defaults #####
  
@@ -30,6 +30,7 @@ index 223043e55194c32493ccb9913295ec65d09a270c..bb60a045c1132bf3a16d0b773ba34e5e
 +    # these values being accurate.
 +    'build_v8_with_gn': 'false',
 +    'enable_lto%': 'false',
++    'openssl_fips': '',
 +
      'conditions': [
        ['target_arch=="arm64"', {

@@ -9,9 +9,9 @@ index f5e18df4e06e24d3bdd51308abde48e217444848..41017d9d53b1c0d563ea0901f5cae407
 --- a/components/viz/host/host_display_client.cc
 +++ b/components/viz/host/host_display_client.cc
 @@ -18,6 +18,10 @@
- 
+
  namespace viz {
- 
+
 +void HostDisplayClient::IsOffscreen(IsOffscreenCallback callback) {
 +  std::move(callback).Run(false);
 +}
@@ -22,7 +22,7 @@ index f5e18df4e06e24d3bdd51308abde48e217444848..41017d9d53b1c0d563ea0901f5cae407
 @@ -46,9 +50,9 @@ void HostDisplayClient::OnDisplayReceivedCALayerParams(
  }
  #endif
- 
+
 -#if defined(OS_WIN)
  void HostDisplayClient::CreateLayeredWindowUpdater(
      mojom::LayeredWindowUpdaterRequest request) {
@@ -31,7 +31,7 @@ index f5e18df4e06e24d3bdd51308abde48e217444848..41017d9d53b1c0d563ea0901f5cae407
      DLOG(ERROR) << "HWND shouldn't be using a layered window";
      return;
 @@ -56,8 +60,12 @@ void HostDisplayClient::CreateLayeredWindowUpdater(
- 
+
    layered_window_updater_ =
        std::make_unique<LayeredWindowUpdaterImpl>(widget_, std::move(request));
 -}
@@ -41,7 +41,7 @@ index f5e18df4e06e24d3bdd51308abde48e217444848..41017d9d53b1c0d563ea0901f5cae407
 +                  "Electron's OSR implementation.";
  #endif
 +}
- 
+
  #if defined(USE_X11)
  void HostDisplayClient::DidCompleteSwapWithNewSize(const gfx::Size& size) {
 diff --git a/components/viz/host/host_display_client.h b/components/viz/host/host_display_client.h
@@ -51,7 +51,7 @@ index 5e5c5da4a3cfc927df3fb120fcab647e927271c1..8c6ec95f309660fb83012a13c7b9bb64
 @@ -30,17 +30,17 @@ class VIZ_HOST_EXPORT HostDisplayClient : public mojom::DisplayClient {
    mojom::DisplayClientPtr GetBoundPtr(
        scoped_refptr<base::SingleThreadTaskRunner> task_runner);
- 
+
 - private:
 + protected:
    // mojom::DisplayClient implementation:
@@ -59,14 +59,14 @@ index 5e5c5da4a3cfc927df3fb120fcab647e927271c1..8c6ec95f309660fb83012a13c7b9bb64
    void OnDisplayReceivedCALayerParams(
        const gfx::CALayerParams& ca_layer_params) override;
  #endif
- 
+
 -#if defined(OS_WIN)
 +  void IsOffscreen(IsOffscreenCallback callback) override;
 +
    void CreateLayeredWindowUpdater(
        mojom::LayeredWindowUpdaterRequest request) override;
 -#endif
- 
+
  #if defined(USE_X11)
    void DidCompleteSwapWithNewSize(const gfx::Size& size) override;
 diff --git a/components/viz/host/layered_window_updater_impl.cc b/components/viz/host/layered_window_updater_impl.cc
@@ -76,13 +76,13 @@ index d3a49ed8be8dc11b86af67cdd600b05ddc0fc486..88bf86f3938b8267d731b52c8c3baa35
 @@ -47,7 +47,9 @@ void LayeredWindowUpdaterImpl::OnAllocatedSharedMemory(
    shm_handle.Close();
  }
- 
+
 -void LayeredWindowUpdaterImpl::Draw(DrawCallback draw_callback) {
 +void LayeredWindowUpdaterImpl::Draw(
 +    const gfx::Rect& damage_rect,
 +    DrawCallback draw_callback) {
    TRACE_EVENT0("viz", "LayeredWindowUpdaterImpl::Draw");
- 
+
    if (!canvas_) {
 diff --git a/components/viz/host/layered_window_updater_impl.h b/components/viz/host/layered_window_updater_impl.h
 index 93c52d2b928cba6e98723e19b005fb7bd7089a58..4dc645e770a2a039ed8e4ff4de555767fee34a3a 100644
@@ -94,7 +94,7 @@ index 93c52d2b928cba6e98723e19b005fb7bd7089a58..4dc645e770a2a039ed8e4ff4de555767
        mojo::ScopedSharedBufferHandle scoped_buffer_handle) override;
 -  void Draw(DrawCallback draw_callback) override;
 +  void Draw(const gfx::Rect& damage_rect, DrawCallback draw_callback) override;
- 
+
   private:
    const HWND hwnd_;
 diff --git a/components/viz/service/BUILD.gn b/components/viz/service/BUILD.gn
@@ -125,7 +125,7 @@ index 1f8132354d2536c6371afeb9086626f5059b49bf..bbb0f95623958052cafb92f2534284af
 @@ -244,6 +245,19 @@ OutputSurfaceProviderImpl::CreateSoftwareOutputDeviceForPlatform(
    if (headless_)
      return std::make_unique<SoftwareOutputDevice>();
- 
+
 +#if !defined(OS_MACOSX)
 +  DCHECK(display_client);
 +  bool offscreen = false;
@@ -147,7 +147,7 @@ index b9357082293cc55650144ccbc8bada8fe6d1cac4..b4cb07e26d1504719f80e5835c1cb5f1
 --- a/components/viz/service/display_embedder/software_output_device_mac.cc
 +++ b/components/viz/service/display_embedder/software_output_device_mac.cc
 @@ -102,6 +102,8 @@ void SoftwareOutputDeviceMac::UpdateAndCopyBufferDamage(
- 
+
  SkCanvas* SoftwareOutputDeviceMac::BeginPaint(
      const gfx::Rect& new_damage_rect) {
 +  last_damage = new_damage_rect;
@@ -170,11 +170,11 @@ index f3867356e3d641416e00e6d115ae9ae2a0be90ab..b1d192d2b20ccb63fba07093101d745e
 @@ -56,6 +56,7 @@ class VIZ_SERVICE_EXPORT SoftwareOutputDeviceMac : public SoftwareOutputDevice {
    void UpdateAndCopyBufferDamage(Buffer* previous_paint_buffer,
                                   const SkRegion& new_damage_rect);
- 
+
 +  gfx::Rect last_damage;
    gfx::Size pixel_size_;
    float scale_factor_ = 1;
- 
+
 diff --git a/components/viz/service/display_embedder/software_output_device_proxy.cc b/components/viz/service/display_embedder/software_output_device_proxy.cc
 new file mode 100644
 index 0000000000000000000000000000000000000000..bbca3a43b5ba8bcf1e3a4dab4509b903b7117f36
@@ -354,7 +354,7 @@ new file mode 100644
 index 0000000000000000000000000000000000000000..ff3c0217812a8370a20aa528f117e928fd1b95f4
 --- /dev/null
 +++ b/components/viz/service/display_embedder/software_output_device_proxy.h
-@@ -0,0 +1,88 @@
+@@ -0,0 +1,90 @@
 +// Copyright 2014 The Chromium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -368,6 +368,8 @@ index 0000000000000000000000000000000000000000..ff3c0217812a8370a20aa528f117e928
 +
 +#include <memory>
 +
++#include "base/memory/shared_memory_mapping.h"
++#include "base/threading/thread_checker.h"
 +#include "components/viz/host/host_display_client.h"
 +#include "components/viz/service/display/software_output_device.h"
 +#include "components/viz/service/viz_service_export.h"
@@ -458,16 +460,16 @@ index 4e3f0255d5fe4991004a50768932c36c42d999ff..bf352091cef00482e3cec74cd523e469
 @@ -268,7 +269,7 @@ void SoftwareOutputDeviceWinProxy::EndPaintDelegated(
    if (!canvas_)
      return;
- 
+
 -  layered_window_updater_->Draw(base::BindOnce(
 +  layered_window_updater_->Draw(damage_rect, base::BindOnce(
        &SoftwareOutputDeviceWinProxy::DrawAck, base::Unretained(this)));
    waiting_on_draw_ack_ = true;
- 
+
 @@ -300,8 +301,13 @@ std::unique_ptr<SoftwareOutputDevice> CreateSoftwareOutputDeviceWin(
      display_client->CreateLayeredWindowUpdater(
          mojo::MakeRequest(&layered_window_updater));
- 
+
 -    return std::make_unique<SoftwareOutputDeviceWinProxy>(
 -        hwnd, std::move(layered_window_updater));
 +    bool offscreen = false;
@@ -486,19 +488,19 @@ index cd8dd80230d199eb05c70710aa681c491ead1646..7b61f33156a4e182ee6ddffc267be798
 +++ b/services/viz/privileged/interfaces/compositing/display_private.mojom
 @@ -77,12 +77,14 @@ interface DisplayPrivate {
  };
- 
+
  interface DisplayClient {
 +  [Sync]
 +  IsOffscreen() => (bool success);
 +
    [EnableIf=is_mac]
    OnDisplayReceivedCALayerParams(gfx.mojom.CALayerParams ca_layer_params);
- 
+
    // Creates a LayeredWindowUpdater implementation to draw into a layered
    // window.
 -  [EnableIf=is_win]
    CreateLayeredWindowUpdater(LayeredWindowUpdater& layered_window_updater);
- 
+
    // Notifies that a swap has occurred and provides information about the pixel
 diff --git a/services/viz/privileged/interfaces/compositing/layered_window_updater.mojom b/services/viz/privileged/interfaces/compositing/layered_window_updater.mojom
 index 360cab3eee4c5189a55269d76daa1d78a98ed3d3..6834242f23d27fd6d428c2cd6040206a79d5097b 100644
@@ -526,7 +528,7 @@ index 494241c374b7ffac0fa89549dc1b8a30359eb17f..5ac7c707374ebcb5510c76017edfccee
 @@ -199,6 +200,15 @@ class COMPOSITOR_EXPORT ContextFactory {
    virtual bool SyncTokensRequiredForDisplayCompositor() = 0;
  };
- 
+
 +class COMPOSITOR_EXPORT CompositorDelegate {
 + public:
 +  virtual std::unique_ptr<viz::HostDisplayClient> CreateHostDisplayClient(
@@ -542,7 +544,7 @@ index 494241c374b7ffac0fa89549dc1b8a30359eb17f..5ac7c707374ebcb5510c76017edfccee
 @@ -238,6 +248,9 @@ class COMPOSITOR_EXPORT Compositor : public cc::LayerTreeHostClient,
    // Schedules a redraw of the layer tree associated with this compositor.
    void ScheduleDraw();
- 
+
 +  CompositorDelegate* delegate() const { return delegate_; }
 +  void SetDelegate(CompositorDelegate* delegate) { delegate_ = delegate; }
 +
@@ -552,12 +554,12 @@ index 494241c374b7ffac0fa89549dc1b8a30359eb17f..5ac7c707374ebcb5510c76017edfccee
 @@ -454,6 +467,8 @@ class COMPOSITOR_EXPORT Compositor : public cc::LayerTreeHostClient,
    ui::ContextFactory* context_factory_;
    ui::ContextFactoryPrivate* context_factory_private_;
- 
+
 +  CompositorDelegate* delegate_ = nullptr;
 +
    // The root of the Layer tree drawn by this compositor.
    Layer* root_layer_ = nullptr;
- 
+
 diff --git a/ui/compositor/host/host_context_factory_private.cc b/ui/compositor/host/host_context_factory_private.cc
 index 0ff1e05244e0e64bc2456dc3d53dd2378dce1a3c..7ca7f5e0cb73c8f6560ff9730d3880a07befe663 100644
 --- a/ui/compositor/host/host_context_factory_private.cc
@@ -583,16 +585,16 @@ index 4014e64a75da88cf66c02e8adb71171c2666cab7..25e57784e1a1ffc546b003daa4cd0059
 +++ b/ui/gfx/ca_layer_params.h
 @@ -6,6 +6,7 @@
  #define UI_GFX_CA_LAYER_PARAMS_H_
- 
+
  #include "build/build_config.h"
 +#include "ui/gfx/geometry/rect.h"
  #include "ui/gfx/geometry/size.h"
  #include "ui/gfx/gfx_export.h"
- 
+
 @@ -41,6 +42,8 @@ struct GFX_EXPORT CALayerParams {
    gfx::ScopedRefCountedIOSurfaceMachPort io_surface_mach_port;
  #endif
- 
+
 +  gfx::Rect damage;
 +
    // The geometry of the frame.
@@ -616,7 +618,7 @@ index dd553996b5c6ff5ec0c210a020a18a6a843b8aae..26d1e0bda2640052d42ea4e691c3df73
 @@ -52,6 +52,9 @@ bool StructTraits<gfx::mojom::CALayerParamsDataView, gfx::CALayerParams>::Read(
    if (!data.ReadPixelSize(&out->pixel_size))
      return false;
- 
+
 +  if (!data.ReadDamage(&out->damage))
 +    return false;
 +
@@ -630,7 +632,7 @@ index 94127a0d5b50b052318e9e5a360755fe771f87e9..348fa26c5c95a13d1ddd0ff2545aca3a
 @@ -20,6 +20,10 @@ struct StructTraits<gfx::mojom::CALayerParamsDataView, gfx::CALayerParams> {
      return ca_layer_params.pixel_size;
    }
- 
+
 +  static gfx::Rect damage(const gfx::CALayerParams& ca_layer_params) {
 +    return ca_layer_params.damage;
 +  }
