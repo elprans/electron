@@ -141,27 +141,3 @@ index ca61088079c4150fcf389504ddcf26bcf6bf69cd..d9c034c39890eef1fe3d95c6d7c0ae68
        const std::string& notification_id,
        const GURL& origin,
        const blink::PlatformNotificationData& notification_data,
-diff --git a/content/test/mock_platform_notification_service.cc b/content/test/mock_platform_notification_service.cc
-index 639a93ac8d4f295910fcfb64d69d1498c9dbbe94..25d7b29b53b426d02664bc904f1c646662d9a5d5 100644
---- a/content/test/mock_platform_notification_service.cc
-+++ b/content/test/mock_platform_notification_service.cc
-@@ -30,6 +30,7 @@ MockPlatformNotificationService::MockPlatformNotificationService(
- MockPlatformNotificationService::~MockPlatformNotificationService() = default;
- 
- void MockPlatformNotificationService::DisplayNotification(
-+    RenderProcessHost* render_process_host,
-     const std::string& notification_id,
-     const GURL& origin,
-     const blink::PlatformNotificationData& notification_data,
-diff --git a/content/test/mock_platform_notification_service.h b/content/test/mock_platform_notification_service.h
-index 6d108f9884f7e8f608b70ec33d286a06346e7456..4650a01c2d090c5957eb7a7e21f124489513142a 100644
---- a/content/test/mock_platform_notification_service.h
-+++ b/content/test/mock_platform_notification_service.h
-@@ -47,6 +47,7 @@ class MockPlatformNotificationService : public PlatformNotificationService {
- 
-   // PlatformNotificationService implementation.
-   void DisplayNotification(
-+      RenderProcessHost* render_process_host,
-       const std::string& notification_id,
-       const GURL& origin,
-       const blink::PlatformNotificationData& notification_data,

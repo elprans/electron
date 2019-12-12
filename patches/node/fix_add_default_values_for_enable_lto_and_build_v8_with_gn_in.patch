@@ -30,6 +30,7 @@ index cebf2121ff913080ab0771f6c4dfa35ce6812bc0..df69aecc74ef66b9501d4bed0e1311e7
 +    # these values being accurate.
 +    'build_v8_with_gn': 'false',
 +    'enable_lto%': 'false',
++    'openssl_fips': '',
 +
      'conditions': [
        ['target_arch=="arm64"', {
