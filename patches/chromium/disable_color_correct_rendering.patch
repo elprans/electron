@@ -269,11 +269,12 @@ diff --git a/third_party/blink/renderer/platform/graphics/canvas_color_params.cc
 index 1aedba288aed698fd1b7ac6a4ef1a67fc892f84a..df2b5b120483225c2bd21a337e6085dbceca4ec4 100644
 --- a/third_party/blink/renderer/platform/graphics/canvas_color_params.cc
 +++ b/third_party/blink/renderer/platform/graphics/canvas_color_params.cc
-@@ -12,6 +12,7 @@
+@@ -12,6 +12,8 @@
  #include "third_party/khronos/GLES3/gl3.h"
  #include "third_party/skia/include/core/SkSurfaceProps.h"
  #include "ui/gfx/color_space.h"
 +#include "ui/gfx/switches.h"
++#include "base/command_line.h"
  
  namespace blink {
  
