@@ -1,0 +1,59 @@
+name: Package node_modules
+
+on:
+  push:
+    tags:
+      - "v**-gentoo"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [12.x]
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 50
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - id: pack
+      env:
+        GITHUB_REF: ${{ github.ref }}
+      run: |
+        yarn install --dev --frozen-lockfile
+        TAG_NAME=$(basename ${GITHUB_REF})
+        UPSTREAM_TAG=${TAG_NAME%-gentoo}
+        A=electron-node-modules-${UPSTREAM_TAG#v}
+        mv node_modules "${A}"
+        tar cJf "${A}.tar.xz" "${A}/"
+        echo ::set-output name=archive::${A}.tar.xz
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+          Gentoo Packaging
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./${{ steps.pack.outputs.archive }}
+        asset_name: ${{ steps.pack.outputs.archive }}
+        asset_content_type: application/x-xz
